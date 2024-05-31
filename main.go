@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hongping1224/lidario"
+	shp "github.com/jonas-p/go-shp"
 )
 
 func generatePointCloudList(inputRoot string, useRelative bool) {
@@ -60,11 +61,22 @@ func generateVectorMapList(inputRoot string, useRelative bool) {
 	w := bufio.NewWriter(f)
 	defer w.Flush()
 	for _, shpPath := range shpPaths {
+		shape, err := shp.Open(shpPath)
+		defer shape.Close()
 		if useRelative {
 			shpPath = shpPath[strings.Index(shpPath, "vector_map"):]
 		}
+		if err != nil {
+			log.Printf("Fail to open %s  with Error: %s", shpPath, err)
+			continue
+		}
+		xmin := shape.BBox().MinX
+		ymin := shape.BBox().MinY
+		xmax := shape.BBox().MaxX
+		ymax := shape.BBox().MaxY
 		fmt.Println(shpPath)
-		if _, err := w.WriteString(fmt.Sprintf("%s,0\n", shpPath)); err != nil {
+
+		if _, err := w.WriteString(fmt.Sprintf("%s,%.5f,%.5f,%.5f,%.5f\n", shpPath, xmin, ymin, xmax, ymax)); err != nil {
 			log.Printf("fail to write csv file %v", err)
 			return
 		}
